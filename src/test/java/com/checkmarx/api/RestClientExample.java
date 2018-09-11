@@ -4,7 +4,12 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
+import org.apache.oltu.oauth2.client.request.OAuthClientRequest;
+import org.apache.oltu.oauth2.client.request.OAuthClientRequest.TokenRequestBuilder;
+import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.apache.oltu.oauth2.common.token.OAuthToken;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -14,26 +19,38 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.checkmarx.api.client.invoker.*;
+import com.checkmarx.api.client.invoker.auth.OAuth;
 import com.checkmarx.api.client.model.*;
 import com.checkmarx.api.client.api.*;
 
 import com.google.gson.Gson;
 
-import com.squareup.okhttp.*;
-import com.squareup.okhttp.Interceptor.Chain;
-import com.squareup.okhttp.logging.HttpLoggingInterceptor;
+import okhttp3.Interceptor;
+import okhttp3.OkHttpClient;
+import okhttp3.OkHttpClient.Builder;
+import okhttp3.Request;
+import okhttp3.logging.HttpLoggingInterceptor;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
-import static java.net.HttpURLConnection.HTTP_OK;;
+import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.HTTP_CREATED;
 
 public class RestClientExample {
 
+	private final static Logger LOGGER = Logger.getLogger(RestClientExample.class.getName());
+	
 	static boolean isDebug = true;
 
 	static ApiClient apiClient;
 
-	public static final String basePath = "http://localhost/cxrestapi";
-	public static final String oauth2LoginUrl = basePath + "/auth/identity/connect/token";
+	public static final String basePath = "http://localhost/cxrestapi/";
+	
+	public static final String OAUTH_TOKENREQUEST_URL = basePath + "auth/identity/connect/token";
+	
 	static final String HEADER_AUTHORIZATION = "Authorization";
+	static OAuthToken token;
 	
 	static {
 		println("REST API Example compatible with 8.8");
@@ -43,83 +60,43 @@ public class RestClientExample {
 	public static void beforeClass() throws IOException {
 		println("*** beforeClass ***");
 
-		OkHttpClient okHttpClient = new com.squareup.okhttp.OkHttpClient();
-
-		// Token authentication, valid for 24 hours only
+		// Token authentication
+		String authName = "oauth2";
+		String username = "administrator";
+		String password = "password";
+		String OAUTH_CLIENT_ID = "resource_owner_client";
+		String OAUTH_CLIENT_SECRET = "014DF517-39D1-4453-B7B3-9930C563627C";
+		String scope = "sast_rest_api";
 		
-		RequestBody formBody = new FormEncodingBuilder()
-				.add("username", "administrator")
-				.add("password", "Cx!123456")
-				.add("grant_type", "password")
-				.add("scope", "sast_rest_api")
-				.add("client_id", "resource_owner_client")
-				.add("client_secret", "014DF517-39D1-4453-B7B3-9930C563627C")
-				.build();
-
-		Request request = new Request.Builder()
-				.url(oauth2LoginUrl)
-				.post(formBody)
-				.build();
 		
-		Response response = okHttpClient.newCall(request).execute();
-
-		Gson gson = new Gson();
-		if (response.code() == HTTP_OK) { // OK
-			final AuthTokenOK token = gson.fromJson(response.body().string(), AuthTokenOK.class);
-			okHttpClient.interceptors().add(new Interceptor() {
-
-				public Response intercept(Chain chain) throws IOException {
-					println("*** AuthRequestInterceptor > intercept");
-										
-					// Add access token
-					Request.Builder requestBuilder = chain.request().newBuilder();
-					requestBuilder.addHeader(HEADER_AUTHORIZATION, "Bearer "+token.access_token);
-					return chain.proceed(requestBuilder.build());
-				}
-			});
-			
-			
-			/* if(isDebug) {
-				okHttpClient.interceptors().add(new Interceptor(){
-
-					public Response intercept(Chain chain) throws IOException {
-						println("*** AuthResponseInterceptor > intercept");
-						Response originalResponse = chain.proceed(chain.request());
-						println(originalResponse.body().string());
-						return originalResponse;
-					}
-				});
-			}*/
-			
-			
-		} else { // Error
-			AuthTokenFailed error = gson.fromJson(response.body().string(), AuthTokenFailed.class);
-		}
-
-		Assert.assertEquals(HTTP_OK, response.code());
+		TokenRequestBuilder tokenRequestBuilder = (new OAuthClientRequest.TokenRequestBuilder(OAUTH_TOKENREQUEST_URL))
+				.setClientId(OAUTH_CLIENT_ID)
+	            .setClientSecret(OAUTH_CLIENT_SECRET)
+	            .setUsername(username)
+	            .setPassword(password)
+				.setGrantType(GrantType.PASSWORD)
+				.setScope(scope);
+		OAuth oauthInterceptor = new OAuth(tokenRequestBuilder);
 		
+		
+		//apiClient = new ApiClient(authName, client_id, client_secret, username, password);
 		apiClient = new ApiClient();
-		apiClient.setBasePath(basePath);
-		apiClient.setDebugging(isDebug);
-		apiClient.selectHeaderContentType(new String[] { "application/json;v=1.0" });
-		apiClient.setHttpClient(okHttpClient);
-
+		apiClient.addAuthorization(authName, oauthInterceptor);
+		apiClient.getAdapterBuilder().baseUrl(basePath);
 		
-		
+		Builder builder = apiClient.getOkBuilder()
+				.addInterceptor(new okhttp3.logging.HttpLoggingInterceptor(
+						new HttpLoggingInterceptor.Logger() {
+							
+							@Override
+							public void log(String message) {
+								LOGGER.info(message);
+							}
+						}
+				).setLevel(HttpLoggingInterceptor.Level.BODY));
+		apiClient.configureFromOkclient(builder.build());
 		
 	}
-
-	class AuthTokenOK {
-		private String access_token;
-		private int expires_in;
-		private String token_type;
-	}
-
-	class AuthTokenFailed {
-		private String error;
-	}
-
-	
 	
 	@AfterClass
 	public static void afterClass() {
@@ -136,54 +113,86 @@ public class RestClientExample {
 		println("*** after ***");
 	}
 
+	@Ignore
 	@Test
-	public void GENERAL_ReturnAllProjectsThenPrintAll() throws ApiException{
+	public void GENERAL_ReturnAllProjectsThenPrintAll() throws IOException {
 		println("*** GENERAL_ReturnAllProjectsThenPrintAll ***");
 		
-		GeneralApi generalApi = new GeneralApi();
-		generalApi.setApiClient(apiClient);
-
-		List<CxProjectManagementPresentationDtosProjectBaseDto> response 
-			= generalApi.projectsManagementGetByprojectNameteamId(null, null);
+		GeneralApi generalApi = apiClient.createService(GeneralApi.class);
+		Response<List<CxProjectManagementPresentationDtosProjectBaseDto>> response 
+			= generalApi.projectsManagementGetByprojectNameteamId(null, null).execute();
 		
-		for(CxProjectManagementPresentationDtosProjectBaseDto project: response) {
+		Assert.assertEquals(HTTP_OK, response.code());
+		
+		for(CxProjectManagementPresentationDtosProjectBaseDto project: response.body()) {
 			println("*** Name " + project.getName() + " ***");
 		}
 		
 	}
 	
-	
-	
+	@Ignore
 	@Test
-	public void SAST_PostNewScanThenDoNothing() throws ApiException {
+	public void SAST_PostNewScanThenDoNothing() throws IOException, InterruptedException  {
 		println("*** SAST_PostNewScanThenDoNothing ***");
 
-		SastApi sastApi = new SastApi(); 
-		sastApi.setApiClient(apiClient);
+		SastApi sastApi = apiClient.createService(SastApi.class); 
 		
+		// Create Scan
 		CxSastScanExecutionApplicationContractsDTOsSastScanRequestWriteDTO scanRequest = 
 				new CxSastScanExecutionApplicationContractsDTOsSastScanRequestWriteDTO();
-		
 		scanRequest.setProjectId(1L);
 		scanRequest.setIsPublic(true);
 		scanRequest.setForceScan(false);
 		scanRequest.setIsPublic(true);
-		CxSuperTypesAPIDtosLinkedResource response = sastApi.sastScansPostByscan(scanRequest);
-		println(String.valueOf(response.getId()));
+		Response<CxSuperTypesAPIDtosLinkedResource> createdScanResponse = sastApi.sastScansPostByscan(scanRequest).execute();
+		Assert.assertEquals(HTTP_CREATED, createdScanResponse.code());
 		
-	}
+		long scanId = createdScanResponse.body().getId();
+		println("Scanned ID: "+String.valueOf(scanId));
+		
+		// Get Scan status
+		sastApi.sastScansGetByid(scanId)
+				.enqueue(new Callback<CxSastScanExecutionPresentationDtosSastScansDto>() {
 
-	@Ignore
+					@Override
+					public void onResponse(Call<CxSastScanExecutionPresentationDtosSastScansDto> call,
+							Response<CxSastScanExecutionPresentationDtosSastScansDto> response) {
+						// TODO Auto-generated method stub
+						println("*** onResponse ***");
+						Assert.assertEquals(HTTP_OK, response.code());
+						
+						CxSastScanExecutionPresentationDtosSastScansDto scanExecResponse = response.body();
+						
+						
+						println("Scanned completed");
+					}
+
+					@Override
+					public void onFailure(Call<CxSastScanExecutionPresentationDtosSastScansDto> call, Throwable t) {
+						// TODO Auto-generated method stub
+						println("*** onFailure ***");
+						t.printStackTrace();
+					}
+					
+				});
+		
+		
+		
+		println("*** End of SAST_PostNewScanThenDoNothing ***");
+	}
+	
+	
 	@Test
-	public void SAST_GetAllEngineDetailsThenPrintAll() throws ApiException {
+	public void SAST_GetAllEngineDetailsThenPrintAll() throws IOException {
 		println("*** SAST_GetAllEngineDetailsThenPrintAll ***");
 
-		SastApi sastApi = new SastApi();
-		sastApi.setApiClient(apiClient);
+		SastApi sastApi = apiClient.createService(SastApi.class); 
 
-		List<CxSastEngineServersApplicationContractsDTOsEngineServerResponsDto> engineServers = sastApi.engineServersV1Get();
-		println("#Engine: "+engineServers.size());
-		for (CxSastEngineServersApplicationContractsDTOsEngineServerResponsDto engine : engineServers) {
+		Response<List<CxSastEngineServersApplicationContractsDTOsEngineServerResponsDto>> response = sastApi.engineServersV1Get().execute();
+		Assert.assertEquals(HTTP_OK, response.code());
+		
+		println("#Engine: "+response.body().size());
+		for (CxSastEngineServersApplicationContractsDTOsEngineServerResponsDto engine : response.body()) {
 			println("*** Engine " + engine.getId() + " ***");
 			println("name: " + engine.getName());
 			println("uri: " + engine.getUri());
@@ -196,8 +205,8 @@ public class RestClientExample {
 		}
 	}
 
-	private static final void println(String line) {
-		System.out.println(line);
+	private static final void println(String message) {
+		LOGGER.info(message);
 	}
 
 }
