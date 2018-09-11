@@ -7,15 +7,19 @@ A sample Java REST Client for CxSAST based on [Swagger](http://swagger.io) code 
 
 ***
 
+## Note
+
+[Swagger UI Doc][2] is provided as reference, please refer to relevant [Checkmarx Knowledge Center][1] article for usage flows.
+
 ## Usage
 
 1. Download the Cx Swagger JSON Descriptor using the steps below, [Swagger.json for CxSAST v8.8.0](src/main/resources/cx-swagger.json);  
 
   a. To retrieve the Swagger JSON Descriptor file, follow the below steps;  
   b. Navigate to your Swagger docs endpoint http://localhost/cxrestapi/help/swagger/ui/index using Chrome  
-  c. Open the developer tab, navigate to the Network tab and filter by XHR tab
+  c. Open the developer tab, navigate to the Network tab and filter by XHR tab  
   d. Look for a request that ends with v1 http://localhost/cxrestapi/help/swagger/docs/v1  
-  e. Copy and paste the content in the response into a new JSON file
+  e. Copy and paste the content in the response into a new JSON file  
 
 2. Modify the Swagger.json for Java [Enum ](https://docs.oracle.com/javase/tutorial/java/javaOO/enum.html) Types, ** this is required as Swagger is unable to properly translate Enum type with additional property.
 
@@ -144,12 +148,14 @@ After Modification
 6. Sample usage of CxSAST REST API usage can be found in [RestClientExample](src/test/java/com/checkmarx/api/RestClientExample.java)
 
 
+
 ## References
+Checkmarx CxSAST REST API [[1]]  
+Checkmarx CxSAST Swagger UI [[2]]  
+Swagger Codegen Maven Plugin [[3]]  
+Swagger Code Generator [[4]]  
 
-Checkmarx CxSAST Swagger UI [[1]]  
-Swagger Codegen Maven Plugin [[2]]  
-Swagger Code Generator [[3]]  
-
-[1]:https://checkmarx.atlassian.net/wiki/spaces/KC/pages/814121835/Swagger+Examples+v8.8.0+and+up "Checkmarx CxSAST Swagger UI"
-[2]:https://github.com/swagger-api/swagger-codegen/tree/master/modules/swagger-codegen-maven-plugin "Swagger Codegen Maven Plugin"
-[3]:https://github.com/swagger-api/swagger-codegen "Swagger Code Generator"
+[1]:https://checkmarx.atlassian.net/wiki/spaces/KC/pages/131039271/REST+API "Checkmarx CxSAST REST API"
+[2]:https://checkmarx.atlassian.net/wiki/spaces/KC/pages/248578259/Swagger+Examples "Checkmarx CxSAST Swagger UI"
+[3]:https://github.com/swagger-api/swagger-codegen/tree/master/modules/swagger-codegen-maven-plugin "Swagger Codegen Maven Plugin"
+[4]:https://github.com/swagger-api/swagger-codegen "Swagger Code Generator"
