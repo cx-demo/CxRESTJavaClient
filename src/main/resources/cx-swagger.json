@@ -395,7 +395,7 @@
 					"200": {
 						"description": "Ok",
 						"schema": {
-							"type": "object"
+							"type": "file"
 						}
 					},
 					"404": {
@@ -430,7 +430,7 @@
 					"200": {
 						"description": "Ok",
 						"schema": {
-							"type": "object"
+							"$ref": "#/definitions/Cx.Reports.SastScan.Presentation.Dtos.CreateReportStatusDto"
 						},
 						"examples": {
 							"link": {
@@ -1528,6 +1528,35 @@
 					"200": {
 						"description": "OK",
 						"schema": {
+							"type": "array",
+							"items": {
+								"$ref": "#/definitions/Cx.Sast.ScanPresets.Presentation.Dtos.SastPresetsDto"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/sast/presets/{id}": {
+			"get": {
+				"tags": ["SAST"],
+				"summary": "Get details of specific preset",
+				"operationId": "Presets_GetByid",
+				"consumes": ["application/json;v=1.0"],
+				"produces": ["application/json;v=1.0"],
+				"parameters": [{
+						"name": "id",
+						"in": "path",
+						"description": "Unique Id of the specific preset",
+						"required": true,
+						"type": "integer",
+						"format": "int64"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
 							"type": "object"
 						}
 					}
@@ -1622,32 +1651,7 @@
 				}
 			}
 		},
-		"/sast/presets/{id}": {
-			"get": {
-				"tags": ["SAST"],
-				"summary": "Get details of specific preset",
-				"operationId": "Presets_GetByid",
-				"consumes": ["application/json;v=1.0"],
-				"produces": ["application/json;v=1.0"],
-				"parameters": [{
-						"name": "id",
-						"in": "path",
-						"description": "Unique Id of the specific preset",
-						"required": true,
-						"type": "integer",
-						"format": "int64"
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "OK",
-						"schema": {
-							"type": "object"
-						}
-					}
-				}
-			}
-		},
+		
 		"/sast/engineServers": {
 			"get": {
 				"tags": ["SAST"],
@@ -3079,6 +3083,35 @@
 				}
 			}
 		},
+		"Cx.Reports.SastScan.Presentation.Dtos.CreateReportStatusDto": {
+			"type": "object",
+			"properties": {
+				"link": {
+					"$ref": "#/definitions/Cx.SuperTypes.API.Dtos.LinkDtoBase",
+					"readOnly": true
+				},
+				"contentType": {
+					"type": "string"
+				},
+				"status": {
+					"$ref": "#/definitions/Cx.Reports.SastScan.Presentation.Dtos.StatusDto",
+					"readOnly": true
+				}
+			}
+		},
+		"Cx.Reports.SastScan.Presentation.Dtos.StatusDto": {
+			"type": "object",
+			"properties": {
+				"id": {
+					"format": "int64",
+					"type": "integer"
+				},
+				"value": {
+					"enum": ["Deleted", "InProcess", "Created", "Failed"],
+					"type": "string"
+				}
+			}
+		},
 		"Cx.Reports.SastScan.Presentation.Dtos.ReportLinksDto": {
 			"type": "object",
 			"properties": {
@@ -3831,6 +3864,24 @@
 			},
 			"example": {
 				"comment": "Some comment"
+			}
+		},
+		"Cx.Sast.ScanPresets.Presentation.Dtos.SastPresetsDto": {
+			"type": "object",
+			"properties": {
+				"id": {
+					"format": "int64",
+					"type": "integer"
+				},
+				"name": {
+					"type": "string"
+				},
+				"ownerName": {
+					"type": "string"
+				},
+				"link": {
+					"$ref": "#/definitions/Cx.SuperTypes.API.Dtos.LinkDtoBase"
+				}
 			}
 		},
 		"Cx.Sast.EngineServers.ApplicationContracts.DTOs.EngineServerResponsDto": {
