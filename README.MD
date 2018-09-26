@@ -1,6 +1,6 @@
 # Sample Java REST Client for CxSAST
 * Author: Pedric Kng
-* Updated: 13 Sept 2018
+* Updated: 26 Sept 2018
 * Compatibility: CxSAST 8.8.0
 
 A sample Java REST Client for CxSAST based on [Swagger](http://swagger.io) code generator

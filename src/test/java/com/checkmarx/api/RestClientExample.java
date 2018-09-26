@@ -49,6 +49,8 @@ import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 
 public class RestClientExample {
 
+	
+	
 	private final static Logger LOGGER = Logger.getLogger(RestClientExample.class.getName());
 	
 	static ApiClient apiClient;
@@ -57,6 +59,7 @@ public class RestClientExample {
 	
 	public static final String OAUTH_TOKENREQUEST_URL = basePath + "auth/identity/connect/token";
 	
+	static final String HEADER_CXORIGIN = "CxOrigin"; // Link transaction
 	static final String HEADER_AUTHORIZATION = "Authorization";
 	static OAuthToken token;
 	
@@ -71,7 +74,7 @@ public class RestClientExample {
 		// Token authentication
 		String authName = "oauth2";
 		String username = "administrator";
-		String password = "password";
+		String password = "";
 		String OAUTH_CLIENT_ID = "resource_owner_client";
 		String OAUTH_CLIENT_SECRET = "014DF517-39D1-4453-B7B3-9930C563627C";
 		String scope = "sast_rest_api";
@@ -93,6 +96,19 @@ public class RestClientExample {
 		apiClient.getAdapterBuilder().baseUrl(basePath);
 		
 		Builder builder = apiClient.getOkBuilder()
+				.addInterceptor(new okhttp3.Interceptor() {
+
+					@Override
+					public okhttp3.Response intercept(Chain chain) throws IOException {
+						Request original = chain.request();
+
+				        Request request = original.newBuilder()
+				            .header(HEADER_CXORIGIN, RestClientExample.class.getName())
+				            .method(original.method(), original.body())
+				            .build();
+
+				        return chain.proceed(request);
+					}})
 				.addInterceptor(new okhttp3.logging.HttpLoggingInterceptor(
 						new HttpLoggingInterceptor.Logger() {
 							
@@ -101,7 +117,8 @@ public class RestClientExample {
 								LOGGER.info(message);
 							}
 						}
-				).setLevel(HttpLoggingInterceptor.Level.BODY));
+					).setLevel(HttpLoggingInterceptor.Level.BODY));
+		
 		apiClient.configureFromOkclient(builder.build());
 		
 	}
@@ -121,7 +138,7 @@ public class RestClientExample {
 		println("*** after ***");
 	}
 
-
+	@Ignore
 	@Test
 	public void CreateProjectScanThenDownloadReport() throws IOException, InterruptedException{
 		println("*** CreateProjectThenConfigureSettings ***");
